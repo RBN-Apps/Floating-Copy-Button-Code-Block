@@ -1,8 +1,6 @@
 /* Container for the floating copy button */
 .floating-copy-button-container {
     position: sticky;
-    top: 0;
-    right: 0;
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -10,12 +8,30 @@
     padding: 8px 12px;
     background: rgba(0, 0, 0, 0.9);
     backdrop-filter: blur(10px);
-    border-radius: 0 0 8px 8px;
-    margin-bottom: -48px; /* Offset to not take up space */
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
     gap: 8px;
+}
+
+/* Gemini.google.com: Floating button at top */
+div.code-block .floating-copy-button-container {
+    top: 0;
+    right: 0;
+    border-radius: 8px 8px 8px 8px;
+    margin-bottom: -48px; /* Offset to not take up space */
+    width: fit-content;
+    margin-left: auto;
+}
+
+/* AI Studio: Floating button at bottom */
+ms-code-block .floating-copy-button-container {
+    bottom: 20px;
+    right: 0;
+    border-radius: 8px 8px 8px 8px;
+    margin-top: -48px; /* Offset to not take up space */
+    width: fit-content;
+    margin-left: auto;
 }
 
 /* Language label in floating button */
@@ -60,10 +76,25 @@
     height: 16px !important;
 }
 
-/* Ensure the code block container allows sticky positioning */
+/* Icon styling for the floating button - Material Symbols (AI Studio) */
+.floating-copy-button .material-symbols-outlined {
+    color: #fff !important;
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* Ensure the code block container allows sticky positioning - Gemini */
 div.code-block {
     position: relative;
     overflow: visible !important; /* This is crucial for sticky positioning */
+}
+
+/* Ensure the code block container allows sticky positioning - AI Studio */
+ms-code-block {
+    position: relative;
+    overflow: visible !important; /* This is crucial for sticky positioning */
+    display: block; /* Ensure custom element behaves like a block */
 }
 
 /* Alternative approach - if the above doesn't work due to parent containers */
@@ -71,8 +102,15 @@ div.code-block {
     position: relative;
 }
 
-/* Ensure the code content area handles overflow properly */
+/* Ensure the code content area handles overflow properly - Gemini */
 .formatted-code-block-internal-container {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Ensure the code content area handles overflow properly - AI Studio */
+.syntax-highlighted-code-wrapper,
+.syntax-highlighted-code {
     overflow-x: auto;
     overflow-y: visible;
 }
@@ -118,7 +156,8 @@ div.code-block {
         border-color: rgba(0, 0, 0, 0.2) !important;
     }
 
-    .floating-copy-button mat-icon {
+    .floating-copy-button mat-icon,
+    .floating-copy-button .material-symbols-outlined {
         color: #333 !important;
     }
 }

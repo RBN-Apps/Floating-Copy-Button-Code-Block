@@ -1,85 +1,172 @@
 const PROCESSED_MARKER_CLASS = 'floating-copy-button-added';
 const FLOATING_BUTTON_CLASS = 'floating-copy-button';
 
+// Detect which site we're on
+const isGeminiSite = window.location.hostname === 'gemini.google.com';
+const isAIStudioSite = window.location.hostname === 'aistudio.google.com';
+
 function createFloatingCopyButton(codeBlockElement) {
-  // Check if we've already processed this code block
-  if (codeBlockElement.classList.contains(PROCESSED_MARKER_CLASS)) {
-    return;
-  }
+    // Check if we've already processed this code block
+    if (codeBlockElement.classList.contains(PROCESSED_MARKER_CLASS)) {
+        return;
+    }
 
-  const header = codeBlockElement.querySelector('.code-block-decoration.header-formatted');
+    let originalCopyButton = null;
+    let referenceElement = null; // Element to observe for visibility
+    let languageText = '';
 
-  if (!header) {
-    return;
-  }
+    if (isGeminiSite) {
+        // Gemini.google.com logic
+        const header = codeBlockElement.querySelector('.code-block-decoration.header-formatted');
+        if (!header) {
+            return;
+        }
+        originalCopyButton = header.querySelector('button.copy-button');
+        referenceElement = header;
 
-  // Find the original copy button
-  const originalCopyButton = header.querySelector('button.copy-button');
-  if (!originalCopyButton) {
-    return;
-  }
+        const languageLabel = header.querySelector('span');
+        if (languageLabel) {
+            languageText = languageLabel.textContent;
+        }
+    } else if (isAIStudioSite) {
+        // AIStudio.google.com logic
+        const footer = codeBlockElement.querySelector('footer');
+        if (!footer) {
+            return;
+        }
+        // Look for copy button in footer
+        originalCopyButton = footer.querySelector('button[mattooltip*="Copy"], button[mattooltip*="copy"]');
+        referenceElement = footer;
 
-  // Create floating button container
-  const floatingContainer = document.createElement('div');
-  floatingContainer.className = `${FLOATING_BUTTON_CLASS}-container`;
+        // Get language from the language span in footer
+        const languageSpan = footer.querySelector('.language');
+        if (languageSpan && languageSpan.textContent !== '') {
+            languageText = languageSpan.textContent.trim();
+        } else {
+            // Fallback to detection from code content
+            languageText = detectLanguageFromCode(codeBlockElement) || 'Code';
+        }
+    }
 
-  // Clone the original copy button
-  const floatingButton = originalCopyButton.cloneNode(true);
-  floatingButton.className = `${FLOATING_BUTTON_CLASS}`;
+    if (!originalCopyButton || !referenceElement) {
+        return;
+    }
 
-  // Add click handler to floating button
-  floatingButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    event.preventDefault();
-    originalCopyButton.click();
-  });
+    // Create floating button container
+    const floatingContainer = document.createElement('div');
+    floatingContainer.className = `${FLOATING_BUTTON_CLASS}-container`;
 
-  // Add language label if exists
-  const languageLabel = header.querySelector('span');
-  if (languageLabel) {
-    const floatingLabel = document.createElement('span');
-    floatingLabel.className = `${FLOATING_BUTTON_CLASS}-label`;
-    floatingLabel.textContent = languageLabel.textContent;
-    floatingContainer.appendChild(floatingLabel);
-  }
+    // Clone the original copy button
+    const floatingButton = originalCopyButton.cloneNode(true);
+    floatingButton.className = `${FLOATING_BUTTON_CLASS}`;
 
-  floatingContainer.appendChild(floatingButton);
+    // Add click handler to floating button
+    floatingButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        originalCopyButton.click();
+    });
 
-  // Insert floating button at the beginning of code block
-  codeBlockElement.insertBefore(floatingContainer, codeBlockElement.firstChild);
+    // Add language label
+    if (languageText) {
+        const floatingLabel = document.createElement('span');
+        floatingLabel.className = `${FLOATING_BUTTON_CLASS}-label`;
+        floatingLabel.textContent = languageText;
+        floatingContainer.appendChild(floatingLabel);
+    }
 
-  // Mark as processed
-  codeBlockElement.classList.add(PROCESSED_MARKER_CLASS);
+    floatingContainer.appendChild(floatingButton);
 
-  // Setup intersection observer to show/hide floating button
-  setupFloatingButtonVisibility(codeBlockElement, floatingContainer, header);
+    // Insert floating button at different positions based on site
+    if (isGeminiSite) {
+        // Gemini: Insert at the beginning (top)
+        codeBlockElement.insertBefore(floatingContainer, codeBlockElement.firstChild);
+    } else if (isAIStudioSite) {
+        // AI Studio: Insert at the end (bottom)
+        codeBlockElement.appendChild(floatingContainer);
+    }
+
+    // Mark as processed
+    codeBlockElement.classList.add(PROCESSED_MARKER_CLASS);
+
+    // Setup intersection observer to show/hide floating button
+    setupFloatingButtonVisibility(codeBlockElement, floatingContainer, referenceElement);
 }
 
-function setupFloatingButtonVisibility(codeBlockElement, floatingContainer, originalHeader) {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        // Original header is visible, hide floating button
-        floatingContainer.style.opacity = '0';
-        floatingContainer.style.pointerEvents = 'none';
-      } else {
-        // Original header is not visible, show floating button
-        floatingContainer.style.opacity = '1';
-        floatingContainer.style.pointerEvents = 'auto';
-      }
-    });
-  }, {
-    root: null,
-    rootMargin: '0px',
-    threshold: 0.1
-  });
+function detectLanguageFromCode(codeBlockElement) {
+    // Try to detect language from various sources
+    const codeContent = codeBlockElement.querySelector('code');
+    if (!codeContent) return null;
 
-  observer.observe(originalHeader);
+    const codeText = codeContent.textContent.trim();
+
+    // Simple language detection based on common patterns
+    if (codeText.includes('def ') || codeText.includes('import ') || codeText.includes('print(')) {
+        return 'Python';
+    }
+    if (codeText.includes('function ') || codeText.includes('const ') || codeText.includes('console.log')) {
+        return 'JavaScript';
+    }
+    if (codeText.includes('public class') || codeText.includes('System.out.print')) {
+        return 'Java';
+    }
+    if (codeText.includes('#include') || codeText.includes('int main(')) {
+        return 'C++';
+    }
+    if (codeText.includes('<!DOCTYPE') || codeText.includes('<html')) {
+        return 'HTML';
+    }
+    if (codeText.includes('SELECT ') || codeText.includes('FROM ')) {
+        return 'SQL';
+    }
+
+    return null;
+}
+
+function setupFloatingButtonVisibility(codeBlockElement, floatingContainer, referenceElement) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (isGeminiSite) {
+                // On Gemini: Hide floating button when header is visible
+                if (entry.isIntersecting) {
+                    floatingContainer.style.opacity = '0';
+                    floatingContainer.style.pointerEvents = 'none';
+                } else {
+                    floatingContainer.style.opacity = '1';
+                    floatingContainer.style.pointerEvents = 'auto';
+                }
+            } else if (isAIStudioSite) {
+                // On AI Studio: Show floating button when footer is NOT visible (opposite logic)
+                if (entry.isIntersecting) {
+                    floatingContainer.style.opacity = '0';
+                    floatingContainer.style.pointerEvents = 'none';
+                } else {
+                    floatingContainer.style.opacity = '1';
+                    floatingContainer.style.pointerEvents = 'auto';
+                }
+            }
+        });
+    }, {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    });
+
+    observer.observe(referenceElement);
 }
 
 function processAllCodeBlocks() {
-  const codeBlocks = document.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
-  codeBlocks.forEach(createFloatingCopyButton);
+    let codeBlocks;
+
+    if (isGeminiSite) {
+        codeBlocks = document.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+    } else if (isAIStudioSite) {
+        codeBlocks = document.querySelectorAll('ms-code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+    } else {
+        return; // Unknown site
+    }
+
+    codeBlocks.forEach(createFloatingCopyButton);
 }
 
 // Initial run when the script is injected
@@ -87,27 +174,41 @@ processAllCodeBlocks();
 
 // Observer for dynamically added code blocks
 const observer = new MutationObserver((mutationsList) => {
-  for (const mutation of mutationsList) {
-    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-      mutation.addedNodes.forEach(node => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          // Check if the added node is a code block itself
-          if (node.matches && node.matches('div.code-block')) {
-            setTimeout(() => createFloatingCopyButton(node), 100);
-          }
-          // Also check if the added node contains code blocks
-          else if (node.querySelectorAll) {
-            const newCodeBlocks = node.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
-            newCodeBlocks.forEach(codeBlockNode => {
-              setTimeout(() => createFloatingCopyButton(codeBlockNode), 100);
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    let newCodeBlocks = [];
+
+                    if (isGeminiSite) {
+                        // Check if the added node is a code block itself
+                        if (node.matches && node.matches('div.code-block')) {
+                            setTimeout(() => createFloatingCopyButton(node), 100);
+                        }
+                        // Also check if the added node contains code blocks
+                        else if (node.querySelectorAll) {
+                            newCodeBlocks = node.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+                        }
+                    } else if (isAIStudioSite) {
+                        // Check if the added node is a code block itself
+                        if (node.matches && node.matches('ms-code-block')) {
+                            setTimeout(() => createFloatingCopyButton(node), 100);
+                        }
+                        // Also check if the added node contains code blocks
+                        else if (node.querySelectorAll) {
+                            newCodeBlocks = node.querySelectorAll('ms-code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+                        }
+                    }
+
+                    newCodeBlocks.forEach(codeBlockNode => {
+                        setTimeout(() => createFloatingCopyButton(codeBlockNode), 100);
+                    });
+                }
             });
-          }
         }
-      });
     }
-  }
 });
 
 const targetNode = document.body;
-const config = { childList: true, subtree: true };
+const config = {childList: true, subtree: true};
 observer.observe(targetNode, config);

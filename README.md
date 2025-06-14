@@ -25,7 +25,7 @@ A small Chrome extension that makes the header (or footer) of code blocks on Gem
 
 ## Installation
 
-1. Download the latest Release
+1. Download the latest Release from the [Releases Page](https://github.com/RBN-Apps/Floating-Copy-Button-Code-Block/releases/latest)
 2. Unzip the downloaded file
 3. Open Chrome and navigate to `chrome://extensions/`
 4. Enable **Developer mode** (toggle in the top right corner)

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Sticky Code Header",
+  "version": "1.0.0",
+  "description": "Makes the header of code blocks on Gemini sticky, so the copy button is always visible.",
+  "permissions": [],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://aistudio.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -30,7 +30,12 @@ function createFloatingCopyButton(codeBlockElement) {
         }
     } else if (isAIStudioSite) {
         // AIStudio.google.com logic
-        const footer = codeBlockElement.querySelector('footer');
+        const msCodeBlock = codeBlockElement.querySelector('ms-code-block');
+        if (!msCodeBlock) {
+            return;
+        }
+        
+        const footer = msCodeBlock.querySelector('footer');
         if (!footer) {
             return;
         }
@@ -38,13 +43,19 @@ function createFloatingCopyButton(codeBlockElement) {
         originalCopyButton = footer.querySelector('button[mattooltip*="Copy"], button[mattooltip*="copy"]');
         referenceElement = footer;
 
-        // Get language from the language span in footer
-        const languageSpan = footer.querySelector('.language');
-        if (languageSpan && languageSpan.textContent !== '') {
-            languageText = languageSpan.textContent.trim();
+        // Get language from footer .language span (primary)
+        const footerLanguageSpan = footer.querySelector('.language');
+        if (footerLanguageSpan && footerLanguageSpan.textContent.trim() !== '') {
+            languageText = footerLanguageSpan.textContent.trim();
         } else {
-            // Fallback to detection from code content
-            languageText = detectLanguageFromCode(codeBlockElement) || 'Code';
+            // Fallback to header span.name
+            const headerLanguageSpan = codeBlockElement.querySelector('.mat-expansion-panel-header .name');
+            if (headerLanguageSpan && headerLanguageSpan.textContent.trim() !== '') {
+                languageText = headerLanguageSpan.textContent.trim();
+            } else {
+                // Final fallback to detection from code content
+                languageText = detectLanguageFromCode(msCodeBlock) || 'Code';
+            }
         }
     }
 
@@ -82,8 +93,11 @@ function createFloatingCopyButton(codeBlockElement) {
         // Gemini: Insert at the beginning (top)
         codeBlockElement.insertBefore(floatingContainer, codeBlockElement.firstChild);
     } else if (isAIStudioSite) {
-        // AI Studio: Insert at the end (bottom)
-        codeBlockElement.appendChild(floatingContainer);
+        // AI Studio: Insert inside the ms-code-block at the end (bottom)
+        const msCodeBlock = codeBlockElement.querySelector('ms-code-block');
+        if (msCodeBlock) {
+            msCodeBlock.appendChild(floatingContainer);
+        }
     }
 
     // Mark as processed
@@ -161,7 +175,7 @@ function processAllCodeBlocks() {
     if (isGeminiSite) {
         codeBlocks = document.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
     } else if (isAIStudioSite) {
-        codeBlocks = document.querySelectorAll('ms-code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+        codeBlocks = document.querySelectorAll('mat-expansion-panel.code-block-container:not(.' + PROCESSED_MARKER_CLASS + ')');
     } else {
         return; // Unknown site
     }
@@ -190,13 +204,13 @@ const observer = new MutationObserver((mutationsList) => {
                             newCodeBlocks = node.querySelectorAll('div.code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
                         }
                     } else if (isAIStudioSite) {
-                        // Check if the added node is a code block itself
-                        if (node.matches && node.matches('ms-code-block')) {
+                        // Check if the added node is a mat-expansion-panel code block itself
+                        if (node.matches && node.matches('mat-expansion-panel.code-block-container')) {
                             setTimeout(() => createFloatingCopyButton(node), 100);
                         }
                         // Also check if the added node contains code blocks
                         else if (node.querySelectorAll) {
-                            newCodeBlocks = node.querySelectorAll('ms-code-block:not(.' + PROCESSED_MARKER_CLASS + ')');
+                            newCodeBlocks = node.querySelectorAll('mat-expansion-panel.code-block-container:not(.' + PROCESSED_MARKER_CLASS + ')');
                         }
                     }
 

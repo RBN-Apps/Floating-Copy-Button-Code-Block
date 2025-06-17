@@ -24,8 +24,8 @@ div.code-block .floating-copy-button-container {
     margin-left: auto;
 }
 
-/* AI Studio: Floating button at bottom */
-ms-code-block .floating-copy-button-container {
+/* AI Studio: Floating button at bottom  */
+mat-expansion-panel.code-block-container ms-code-block .floating-copy-button-container {
     bottom: 20px;
     right: 0;
     border-radius: 8px 8px 8px 8px;
@@ -91,6 +91,11 @@ div.code-block {
 }
 
 /* Ensure the code block container allows sticky positioning - AI Studio */
+mat-expansion-panel.code-block-container {
+    position: relative;
+    overflow: visible !important; /* This is crucial for sticky positioning */
+}
+
 ms-code-block {
     position: relative;
     overflow: visible !important; /* This is crucial for sticky positioning */
